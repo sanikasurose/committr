@@ -1,9 +1,12 @@
 package com.committr.backend.github;
 
 import com.committr.backend.config.GitHubOAuthProperties;
+import com.committr.backend.dto.auth.OAuthLoginCompletion;
 import com.committr.backend.dto.github.GithubAccessTokenResponse;
 import com.committr.backend.dto.github.GithubUserLogPayload;
 import com.committr.backend.dto.github.GithubUserResponse;
+import com.committr.backend.session.SessionUserDto;
+import com.committr.backend.user.User;
 import com.committr.backend.user.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,7 +69,7 @@ public class GitHubOAuthService {
         return URI.create(url);
     }
 
-    public GithubUserLogPayload completeLogin(String authorizationCode) {
+    public OAuthLoginCompletion completeLogin(String authorizationCode) {
         if (authorizationCode == null || authorizationCode.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing authorization code.");
         }
@@ -86,7 +89,7 @@ public class GitHubOAuthService {
             );
         }
 
-        userService.upsertUser(user, accessToken);
+        User saved = userService.upsertUser(user, accessToken);
 
         String avatarUrl = user.avatarUrl() == null ? "" : user.avatarUrl();
         GithubUserLogPayload payload = new GithubUserLogPayload(
@@ -95,7 +98,12 @@ public class GitHubOAuthService {
             avatarUrl
         );
         logUserPayload(payload);
-        return payload;
+        SessionUserDto sessionUser = new SessionUserDto(
+            saved.getId(),
+            saved.getUsername(),
+            saved.getAvatarUrl() != null ? saved.getAvatarUrl() : ""
+        );
+        return new OAuthLoginCompletion(payload, sessionUser);
     }
 
     private String exchangeCodeForAccessToken(String code) {
