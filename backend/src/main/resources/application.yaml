@@ -14,8 +14,8 @@ spring:
 
   data:
     redis:
-      host: ${SPRING_DATA_REDIS_HOST}
-      port: ${SPRING_DATA_REDIS_PORT}
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
   flyway:
     enabled: true
@@ -27,6 +27,18 @@ server:
 committr:
   encryption:
     key: ${ENCRYPTION_KEY:}
+  session:
+    ttl: 30m
+    cookie-name: sessionId
+    # Set true temporarily to verify Redis from the app (KEYS * should include test).
+    redis-startup-test: false
+    cookie-secure: ${SESSION_COOKIE_SECURE:false}
+    cookie-same-site: Lax
+  cors:
+    allowed-origin-patterns:
+      - "http://localhost:*"
+      - "http://127.0.0.1:*"
+
 
 github:
   oauth:

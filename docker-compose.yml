@@ -33,6 +33,10 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      # Required by EncryptionService; 32 UTF-8 chars. Host .env can override; empty uses this dev-only default.
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-12345678901234567890123456789012}
+      # Runs Flyway repair before migrate (see FlywayDockerConfig); fixes checksum drift after edited migrations.
+      SPRING_PROFILES_ACTIVE: docker
     ports:
       - "8080:8080"
 
