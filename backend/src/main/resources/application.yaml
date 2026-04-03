@@ -24,6 +24,10 @@ spring:
 server:
   port: 8080
 
+committr:
+  encryption:
+    key: ${ENCRYPTION_KEY:}
+
 github:
   oauth:
     client-id: ${GITHUB_OAUTH_CLIENT_ID:}

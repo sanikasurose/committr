@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:committr;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# Test-only AES-256 key (32 UTF-8 bytes); never use in production.
+committr:
+  encryption:
+    key: "0123456789abcdef0123456789abcdef"
