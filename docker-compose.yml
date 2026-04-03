@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: committr-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: committr-redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    container_name: committr-backend
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    container_name: committr-frontend
+    depends_on:
+      - backend
+    ports:
+      - "4200:4200"
+
+volumes:
+  postgres_data:
