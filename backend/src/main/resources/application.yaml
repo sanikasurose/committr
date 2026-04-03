@@ -24,3 +24,15 @@ spring:
 
 server:
   port: 8080
+
+github:
+  oauth:
+    client-id: ${GITHUB_OAUTH_CLIENT_ID:}
+    client-secret: ${GITHUB_OAUTH_CLIENT_SECRET:}
+    redirect-uri: ${GITHUB_OAUTH_REDIRECT_URI:http://localhost:8080/api/auth/callback}
+    scope: "${GITHUB_OAUTH_SCOPE:read:user repo}"
+    # GitHub REST API requires a User-Agent; see https://docs.github.com/en/rest/using-the-rest-api/getting-started-with-the-rest-api#user-agent
+    user-agent: ${GITHUB_OAUTH_USER_AGENT:Committr-Backend}
+    authorize-url: ${GITHUB_OAUTH_AUTHORIZE_URL:https://github.com/login/oauth/authorize}
+    access-token-url: ${GITHUB_OAUTH_ACCESS_TOKEN_URL:https://github.com/login/oauth/access_token}
+    user-api-url: ${GITHUB_OAUTH_USER_API_URL:https://api.github.com/user}
