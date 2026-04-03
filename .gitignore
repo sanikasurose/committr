@@ -18,11 +18,9 @@ logs/
 /backend/target/
 *.class
 *.jar
+!backend/.mvn/wrapper/maven-wrapper.jar
 *.war
 *.ear
-
-# Maven
-/backend/.mvn/wrapper/maven-wrapper.jar
 
 # Frontend (Angular/Node)
 /frontend/node_modules/
