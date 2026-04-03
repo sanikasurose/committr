@@ -4,6 +4,7 @@ import com.committr.backend.config.GitHubOAuthProperties;
 import com.committr.backend.dto.github.GithubAccessTokenResponse;
 import com.committr.backend.dto.github.GithubUserLogPayload;
 import com.committr.backend.dto.github.GithubUserResponse;
+import com.committr.backend.user.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
@@ -33,15 +34,18 @@ public class GitHubOAuthService {
     private final RestTemplate restTemplate;
     private final GitHubOAuthProperties properties;
     private final ObjectMapper objectMapper;
+    private final UserService userService;
 
     public GitHubOAuthService(
         RestTemplate restTemplate,
         GitHubOAuthProperties properties,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        UserService userService
     ) {
         this.restTemplate = restTemplate;
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.userService = userService;
     }
 
     public URI buildAuthorizationUri() {
@@ -81,6 +85,8 @@ public class GitHubOAuthService {
                 "GitHub user response was missing required fields."
             );
         }
+
+        userService.upsertUser(user, accessToken);
 
         String avatarUrl = user.avatarUrl() == null ? "" : user.avatarUrl();
         GithubUserLogPayload payload = new GithubUserLogPayload(
