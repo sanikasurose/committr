@@ -3,17 +3,14 @@ package com.committr.backend.session;
 import com.committr.backend.config.SessionProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RedisSessionService {
-
-    private static final Logger log = LoggerFactory.getLogger(RedisSessionService.class);
 
     private static final String KEY_PREFIX = "session:";
 
@@ -35,16 +32,14 @@ public class RedisSessionService {
         String sessionId = UUID.randomUUID().toString();
         try {
             String json = objectMapper.writeValueAsString(user);
-            System.out.println("Saving to Redis...");
             stringRedisTemplate.opsForValue().set(redisKey(sessionId), json, sessionProperties.ttl());
-            log.info("Redis session stored key={} ttl={}", redisKey(sessionId), sessionProperties.ttl());
             return sessionId;
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize session payload", e);
         }
     }
 
-    public Optional<SessionUserDto> getSessionAndRefreshTtl(String sessionId) {
+    public Optional<SessionUserDto> getSession(String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
             return Optional.empty();
         }
@@ -53,13 +48,24 @@ public class RedisSessionService {
         if (json == null) {
             return Optional.empty();
         }
-        stringRedisTemplate.expire(key, sessionProperties.ttl());
         try {
             return Optional.of(objectMapper.readValue(json, SessionUserDto.class));
         } catch (JsonProcessingException e) {
             stringRedisTemplate.delete(key);
             return Optional.empty();
         }
+    }
+
+    public void refreshSessionTtl(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        String key = redisKey(sessionId);
+        Duration ttl = sessionProperties.ttl();
+        if (ttl.isNegative() || ttl.isZero()) {
+            return;
+        }
+        stringRedisTemplate.expire(key, ttl);
     }
 
     public void deleteSession(String sessionId) {
