@@ -34,4 +34,15 @@ public class SessionCookieFactory {
             .maxAge(0)
             .build();
     }
+
+    /** Clears any legacy servlet container session cookie so only {@code sessionId} is used. */
+    public ResponseCookie createJSessionIdDeleteCookie() {
+        return ResponseCookie.from("JSESSIONID", "")
+            .path("/")
+            .maxAge(0)
+            .httpOnly(true)
+            .sameSite(sessionProperties.cookieSameSite())
+            .secure(sessionProperties.cookieSecure())
+            .build();
+    }
 }

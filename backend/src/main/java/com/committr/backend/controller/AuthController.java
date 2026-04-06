@@ -58,6 +58,7 @@ public class AuthController {
         String sessionId = redisSessionService.createSession(completion.sessionUser());
         ResponseCookie cookie = sessionCookieFactory.createSessionCookie(sessionId);
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, sessionCookieFactory.createJSessionIdDeleteCookie().toString());
         return ResponseEntity.ok(completion.payload());
     }
 
@@ -74,6 +75,7 @@ public class AuthController {
             redisSessionService.deleteSession(cookie.getValue());
         }
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookieFactory.createDeleteCookie().toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, sessionCookieFactory.createJSessionIdDeleteCookie().toString());
         return ResponseEntity.noContent().build();
     }
 
