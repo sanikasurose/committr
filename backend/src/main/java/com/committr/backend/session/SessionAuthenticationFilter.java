@@ -27,12 +27,13 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
         throws ServletException, IOException {
         var cookie = WebUtils.getCookie(request, sessionProperties.cookieName());
         if (cookie != null && cookie.getValue() != null && !cookie.getValue().isBlank()) {
+            String sessionId = cookie.getValue();
             redisSessionService
-                .getSessionAndRefreshTtl(cookie.getValue())
-                .ifPresent(
-                    user -> SecurityContextHolder.getContext()
-                        .setAuthentication(new SessionAuthenticationToken(user))
-                );
+                .getSession(sessionId)
+                .ifPresent(user -> {
+                    redisSessionService.refreshSessionTtl(sessionId);
+                    SecurityContextHolder.getContext().setAuthentication(new SessionAuthenticationToken(user));
+                });
         }
         filterChain.doFilter(request, response);
     }
