@@ -33,7 +33,6 @@ public class RedisSessionService {
 
     public String createSession(SessionUserDto user) {
         String sessionId = UUID.randomUUID().toString();
-        System.out.println("CREATING SESSION: " + sessionId);
         try {
             String json = objectMapper.writeValueAsString(user);
             System.out.println("Saving to Redis...");
