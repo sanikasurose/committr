@@ -24,10 +24,10 @@ spring:
 server:
   port: 8080
 
+security:
+  encryption-key: ${ENCRYPTION_KEY}
+
 committr:
-  encryption:
-    # 32 UTF-8 bytes for AES-256; override with ENCRYPTION_KEY in real deployments.
-    key: ${ENCRYPTION_KEY:12345678901234567890123456789012}
   session:
     ttl: 30m
     cookie-name: sessionId
@@ -43,8 +43,8 @@ committr:
 
 github:
   oauth:
-    client-id: ${GITHUB_OAUTH_CLIENT_ID:}
-    client-secret: ${GITHUB_OAUTH_CLIENT_SECRET:}
+    client-id: ${GITHUB_CLIENT_ID}
+    client-secret: ${GITHUB_CLIENT_SECRET}
     redirect-uri: ${GITHUB_OAUTH_REDIRECT_URI:http://localhost:8080/api/auth/callback}
     scope: "${GITHUB_OAUTH_SCOPE:read:user repo}"
     # GitHub REST API requires a User-Agent; see https://docs.github.com/en/rest/using-the-rest-api/getting-started-with-the-rest-api#user-agent

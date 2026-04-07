@@ -17,7 +17,11 @@ spring:
       host: localhost
       port: 6379
 
-# Test-only AES-256 key (32 UTF-8 bytes); never use in production.
-committr:
-  encryption:
-    key: "0123456789abcdef0123456789abcdef"
+# Test-only secrets (not real credentials); @SpringBootTest needs valid shape for startup validation.
+security:
+  encryption-key: "0123456789abcdef0123456789abcdef"
+
+github:
+  oauth:
+    client-id: test-github-client-id
+    client-secret: test-github-client-secret
