@@ -7,11 +7,10 @@ import { Observable } from 'rxjs';
 })
 export class ApiService {
 
-  private baseUrl = 'http://localhost:8080';
-
   constructor(private http: HttpClient) {}
 
+  /** Same-origin `/api` in dev (via `proxy.conf.json`) avoids browser CORS vs `localhost:8080`. */
   getHealth(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/health`);
+    return this.http.get('/api/health');
   }
 }
