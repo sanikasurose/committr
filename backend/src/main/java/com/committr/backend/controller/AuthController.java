@@ -1,7 +1,7 @@
 package com.committr.backend.controller;
 
 import com.committr.backend.config.SessionProperties;
-import com.committr.backend.dto.auth.MeResponse;
+import com.committr.backend.dto.auth.AuthUserResponse;
 import com.committr.backend.dto.github.GithubUserLogPayload;
 import com.committr.backend.github.GitHubOAuthService;
 import com.committr.backend.session.RedisSessionService;
@@ -63,9 +63,9 @@ public class AuthController {
     }
 
     @GetMapping("/api/auth/me")
-    public MeResponse me(Authentication authentication) {
+    public AuthUserResponse me(Authentication authentication) {
         SessionUserDto user = resolveSessionUser(authentication);
-        return new MeResponse(user.username(), user.avatarUrl());
+        return new AuthUserResponse(user.username(), user.avatarUrl());
     }
 
     @PostMapping("/api/auth/logout")
@@ -76,7 +76,7 @@ public class AuthController {
         }
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookieFactory.createDeleteCookie().toString());
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookieFactory.createJSessionIdDeleteCookie().toString());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().build();
     }
 
     private static SessionUserDto resolveSessionUser(Authentication authentication) {
