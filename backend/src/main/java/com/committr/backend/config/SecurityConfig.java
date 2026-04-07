@@ -35,8 +35,8 @@ public class SecurityConfig {
             .logout(l -> l.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/callback").permitAll()
                 .requestMatchers(
-                    "/api/auth/**",
                     "/api/health",
                     "/api/profile/**",
                     "/api/badge/**",

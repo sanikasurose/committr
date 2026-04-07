@@ -26,7 +26,8 @@ server:
 
 committr:
   encryption:
-    key: ${ENCRYPTION_KEY:}
+    # 32 UTF-8 bytes for AES-256; override with ENCRYPTION_KEY in real deployments.
+    key: ${ENCRYPTION_KEY:12345678901234567890123456789012}
   session:
     ttl: 30m
     cookie-name: sessionId
