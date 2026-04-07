@@ -4,13 +4,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "committr.encryption")
-public record EncryptionProperties(String key) {
+@ConfigurationProperties(prefix = "security")
+public record SecurityProperties(String encryptionKey) {
+
+    public SecurityProperties {
+        decodeKeyMaterialToBytes(encryptionKey);
+    }
 
     public byte[] requireKeyBytes() {
+        return decodeKeyMaterialToBytes(encryptionKey);
+    }
+
+    private static byte[] decodeKeyMaterialToBytes(String key) {
         if (key == null || key.isBlank()) {
             throw new IllegalStateException(
-                "ENCRYPTION_KEY is missing: set committr.encryption.key / ENCRYPTION_KEY (32 bytes for AES-256)."
+                "ENCRYPTION_KEY is missing: set security.encryption-key / ENCRYPTION_KEY (32 bytes for AES-256)."
             );
         }
         String trimmed = key.strip();

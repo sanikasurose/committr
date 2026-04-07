@@ -1,6 +1,6 @@
 package com.committr.backend.crypto;
 
-import com.committr.backend.config.EncryptionProperties;
+import com.committr.backend.config.SecurityProperties;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -23,7 +23,7 @@ public class EncryptionService {
     private final SecretKey secretKey;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public EncryptionService(EncryptionProperties properties) {
+    public EncryptionService(SecurityProperties properties) {
         byte[] keyBytes = properties.requireKeyBytes();
         this.secretKey = new SecretKeySpec(keyBytes, "AES");
     }

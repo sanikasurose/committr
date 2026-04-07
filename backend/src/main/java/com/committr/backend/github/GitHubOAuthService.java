@@ -55,7 +55,7 @@ public class GitHubOAuthService {
         if (properties.clientId() == null || properties.clientId().isBlank()) {
             throw new ResponseStatusException(
                 HttpStatus.SERVICE_UNAVAILABLE,
-                "GitHub OAuth is not configured: set github.oauth.client-id (e.g. GITHUB_OAUTH_CLIENT_ID)."
+                "GitHub OAuth is not configured: set github.oauth.client-id (e.g. GITHUB_CLIENT_ID)."
             );
         }
         String url = UriComponentsBuilder
