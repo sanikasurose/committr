@@ -11,4 +11,6 @@ public interface RepositoryRepository extends JpaRepository<RepositoryEntity, Lo
     Optional<RepositoryEntity> findByIdAndUserId(Long id, Long userId);
 
     boolean existsByUserIdAndGithubRepoId(Long userId, Long githubRepoId);
+
+    Optional<RepositoryEntity> findByUserIdAndGithubRepoId(Long userId, Long githubRepoId);
 }
