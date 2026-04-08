@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RepositoryRepository extends JpaRepository<RepositoryEntity, Long> {
 
-    List<RepositoryEntity> findByUserIdAndDeletedAtIsNull(Long userId);
+    List<RepositoryEntity> findByUser_IdAndDeletedAtIsNull(Long userId);
 
-    Optional<RepositoryEntity> findByIdAndUserId(Long id, Long userId);
+    Optional<RepositoryEntity> findByIdAndUser_Id(Long id, Long userId);
 
-    boolean existsByUserIdAndGithubRepoId(Long userId, Long githubRepoId);
+    boolean existsByUser_IdAndGithubRepoId(Long userId, Long githubRepoId);
 
-    Optional<RepositoryEntity> findByUserIdAndGithubRepoId(Long userId, Long githubRepoId);
+    Optional<RepositoryEntity> findByUser_IdAndGithubRepoId(Long userId, Long githubRepoId);
 }
