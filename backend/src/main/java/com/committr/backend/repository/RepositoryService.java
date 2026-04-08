@@ -1,8 +1,9 @@
 package com.committr.backend.repository;
 
+import com.committr.backend.dto.github.GitHubRepoResponse;
+import com.committr.backend.github.GitHubClient;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,9 +13,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class RepositoryService {
 
     private final RepositoryRepository repositoryRepository;
+    private final GitHubClient gitHubClient;
 
-    public RepositoryService(RepositoryRepository repositoryRepository) {
+    public RepositoryService(RepositoryRepository repositoryRepository, GitHubClient gitHubClient) {
         this.repositoryRepository = repositoryRepository;
+        this.gitHubClient = gitHubClient;
     }
 
     @Transactional(readOnly = true)
@@ -27,7 +30,8 @@ public class RepositoryService {
         String trimmed = fullName == null ? "" : fullName.trim();
         ParsedFullName parsed = parseFullName(trimmed);
 
-        long githubRepoId = mockGithubRepoId(parsed);
+        GitHubRepoResponse github = gitHubClient.getRepository(parsed.owner(), parsed.repo());
+        long githubRepoId = github.id();
         if (repositoryRepository.existsByUserIdAndGithubRepoId(userId, githubRepoId)) {
             RepositoryEntity existing = repositoryRepository
                 .findByUserIdAndGithubRepoId(userId, githubRepoId)
@@ -35,14 +39,14 @@ public class RepositoryService {
             if (existing.getDeletedAt() == null) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Repository already added");
             }
-            applyMockGithubFields(existing, parsed, githubRepoId);
+            applyGithubFields(existing, github);
             existing.setDeletedAt(null);
             return repositoryRepository.save(existing);
         }
 
         RepositoryEntity entity = new RepositoryEntity();
         entity.setUserId(userId);
-        applyMockGithubFields(entity, parsed, githubRepoId);
+        applyGithubFields(entity, github);
         return repositoryRepository.save(entity);
     }
 
@@ -56,20 +60,13 @@ public class RepositoryService {
         repositoryRepository.save(entity);
     }
 
-    private static void applyMockGithubFields(RepositoryEntity target, ParsedFullName parsed, long githubRepoId) {
-        target.setGithubRepoId(githubRepoId);
-        target.setName(parsed.repo());
-        target.setFullName(parsed.owner() + "/" + parsed.repo());
-        target.setOwnerLogin(parsed.owner());
-        target.setPrivate(false);
-        target.setHtmlUrl("https://github.com/" + parsed.owner() + "/" + parsed.repo());
-    }
-
-    /**
-     * Deterministic mock GitHub repository id until the real API is wired in (phase 2.4).
-     */
-    private static long mockGithubRepoId(ParsedFullName parsed) {
-        return Integer.toUnsignedLong(Objects.hash(parsed.owner(), parsed.repo()));
+    private static void applyGithubFields(RepositoryEntity target, GitHubRepoResponse github) {
+        target.setGithubRepoId(github.id());
+        target.setName(github.name());
+        target.setFullName(github.fullName());
+        target.setOwnerLogin(github.owner().login());
+        target.setPrivate(github.isPrivate());
+        target.setHtmlUrl(github.htmlUrl());
     }
 
     private static ParsedFullName parseFullName(String trimmed) {
