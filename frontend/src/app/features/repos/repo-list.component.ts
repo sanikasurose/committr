@@ -1,9 +1,6 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of, Subject } from 'rxjs';
-import { catchError, finalize, switchMap, tap, timeout } from 'rxjs/operators';
 import { RepoService, Repository } from '../../services/repo.service';
 import { AddRepoComponent } from './add-repo.component';
 
@@ -13,100 +10,147 @@ import { AddRepoComponent } from './add-repo.component';
   imports: [NgFor, NgIf, AddRepoComponent],
   template: `
     <h1>Repositories</h1>
-    <app-add-repo (repoAdded)="onRepoAdded($event)" />
+    <app-add-repo
+      [adding]="adding"
+      [addError]="addError"
+      [resetKey]="addSuccessKey"
+      (repoAddRequested)="onAddRequested($event)"
+    />
 
-    <p *ngIf="loading">Loading…</p>
-    <p *ngIf="refreshing && !loading">Updating…</p>
-    <p *ngIf="error && !loading && !refreshing">{{ error }}</p>
+    <p *ngIf="loading && repos.length === 0" class="status">Loading repositories…</p>
+    <p *ngIf="loading && repos.length > 0" class="status muted">Updating list…</p>
 
-    <ul *ngIf="!loading && repos.length">
+    <div *ngIf="error" class="error-banner" role="alert">{{ error }}</div>
+
+    <ul *ngIf="!loading || repos.length > 0" class="repo-list">
       <li *ngFor="let repo of repos">
         <a [href]="repo.htmlUrl" target="_blank" rel="noopener noreferrer">{{ repo.fullName }}</a>
-        <button type="button" (click)="onDelete(repo.id)" [disabled]="deletingId === repo.id">
-          Delete
+        <button
+          type="button"
+          (click)="onDelete(repo.id)"
+          [disabled]="deletingId === repo.id"
+          [attr.aria-busy]="deletingId === repo.id"
+        >
+          {{ deletingId === repo.id ? 'Deleting…' : 'Delete' }}
         </button>
       </li>
     </ul>
-    <p *ngIf="!loading && !repos.length && !error && !refreshing">No repositories tracked yet.</p>
-  `
+
+    <p *ngIf="!loading && repos.length === 0 && !error" class="empty">No repositories added yet</p>
+  `,
+  styles: [
+    `
+      .status {
+        margin: 0.75rem 0;
+      }
+      .status.muted {
+        font-size: 0.875rem;
+        color: var(--muted, #64748b);
+      }
+      .error-banner {
+        margin: 0.75rem 0;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        background: color-mix(in srgb, #ef4444 12%, transparent);
+        color: #b91c1c;
+      }
+      .repo-list {
+        list-style: none;
+        padding: 0;
+        margin: 1rem 0 0;
+      }
+      .repo-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+      }
+      .empty {
+        margin-top: 1rem;
+        color: var(--muted, #64748b);
+      }
+    `
+  ]
 })
 export class RepoListComponent implements OnInit {
-  repos: any[] = [];
+  repos: Repository[] = [];
   loading = false;
-  /** True when re-fetching but we already have rows to show (avoid hiding the list). */
-  refreshing = false;
   error: string | null = null;
+  adding = false;
+  addError: string | null = null;
+  /** Increment after a successful add so the child form can reset. */
+  addSuccessKey = 0;
   deletingId: number | null = null;
 
-  private readonly reloadTrigger = new Subject<void>();
-  private loadGeneration = 0;
+  private loadId = 0;
 
   private readonly repoService = inject(RepoService);
-  private readonly destroyRef = inject(DestroyRef);
-
-  constructor() {
-    this.reloadTrigger
-      .pipe(
-        switchMap(() => this.runLoadRepos()),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe();
-  }
+  private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.loadRepos();
   }
 
-  onRepoAdded(repo: Repository): void {
-    this.repos = [repo, ...this.repos.filter((r) => r.id !== repo.id)];
-    this.loadRepos();
-  }
-
   loadRepos(): void {
-    const isInitial = this.repos.length === 0;
-    this.loading = isInitial;
-    this.refreshing = !isInitial;
+    this.loading = true;
     this.error = null;
-    this.reloadTrigger.next();
-  }
-
-  private runLoadRepos() {
-    const gen = ++this.loadGeneration;
-    return this.repoService.getRepos().pipe(
-      timeout(60_000),
-      catchError((err) => {
-        this.error = this.extractErrorMessage(err);
-        return of([] as Repository[]);
-      }),
-      tap((repos) => {
-        if (gen === this.loadGeneration) {
-          this.repos = Array.isArray(repos) ? repos : [];
-        }
-      }),
-      finalize(() => {
-        if (gen === this.loadGeneration) {
-          this.loading = false;
-          this.refreshing = false;
-        }
-      })
-    );
-  }
-
-  onDelete(id: number): void {
-    this.deletingId = id;
-    this.repoService.deleteRepo(id).subscribe({
-      next: () => {
-        this.deletingId = null;
-        this.loadRepos();
+    this.cdr.markForCheck();
+    const id = ++this.loadId;
+    this.repoService.getRepos().subscribe({
+      next: (data) => {
+        if (id !== this.loadId) return;
+        this.repos = Array.isArray(data) ? data : [];
+        this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
-        this.deletingId = null;
-        this.error = this.extractErrorMessage(err);
+        if (id !== this.loadId) return;
+        this.error = this.extractErrorMessage(err) || 'Failed to load repositories';
+        this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
-  private extractErrorMessage(err: unknown): string {
+  onAddRequested(fullName: string): void {
+    this.adding = true;
+    this.addError = null;
+    this.cdr.markForCheck();
+    this.repoService.addRepo(fullName).subscribe({
+      next: () => {
+        this.adding = false;
+        this.addError = null;
+        this.addSuccessKey++;
+        this.cdr.markForCheck();
+        this.loadRepos();
+      },
+      error: (err) => {
+        this.adding = false;
+        this.addError = this.extractErrorMessage(err) || 'Failed to add repository';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  onDelete(id: number): void {
+    this.deletingId = id;
+    this.error = null;
+    this.cdr.markForCheck();
+    this.repoService.deleteRepo(id).subscribe({
+      next: () => {
+        this.deletingId = null;
+        this.cdr.markForCheck();
+        this.loadRepos();
+      },
+      error: (err) => {
+        this.deletingId = null;
+        this.error = this.extractErrorMessage(err) || 'Failed to delete repository';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private extractErrorMessage(err: unknown): string | null {
     if (err instanceof HttpErrorResponse) {
       if (err.status === 0) {
         return 'Cannot reach API (network/CORS). Check that the backend is running on port 8080 and try a hard refresh.';
@@ -130,6 +174,6 @@ export class RepoListComponent implements OnInit {
       const m = (err as { message?: unknown }).message;
       if (typeof m === 'string') return m;
     }
-    return 'Request failed.';
+    return null;
   }
 }
