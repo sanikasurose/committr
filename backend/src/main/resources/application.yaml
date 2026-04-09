@@ -16,6 +16,9 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
+      # Avoid hanging requests for minutes when Redis is unreachable (every API hit checks session).
+      connect-timeout: 2s
+      timeout: 2s
 
   flyway:
     enabled: true
