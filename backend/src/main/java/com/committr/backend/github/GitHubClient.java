@@ -16,10 +16,13 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class GitHubClient {
 
+    private static final Logger log = LoggerFactory.getLogger(GitHubClient.class);
     private static final String REPO_URL_TEMPLATE = "https://api.github.com/repos/{owner}/{repo}";
 
     private final RestTemplate restTemplate;
@@ -31,6 +34,7 @@ public class GitHubClient {
     }
 
     public GitHubRepoResponse getRepository(String owner, String repo) {
+        long startNanos = System.nanoTime();
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         if (oauthProperties.userAgent() != null && !oauthProperties.userAgent().isBlank()) {
@@ -67,6 +71,12 @@ public class GitHubClient {
                     "GitHub repository response was missing required fields."
                 );
             }
+            log.info(
+                "GitHub GET /repos/{}/{} completed in {} ms",
+                owner,
+                repo,
+                (System.nanoTime() - startNanos) / 1_000_000
+            );
             return body;
         } catch (HttpClientErrorException.NotFound ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "GitHub repository not found.", ex);
