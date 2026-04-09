@@ -1,7 +1,6 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
-import { RepoService, Repository } from '../../services/repo.service';
 
 @Component({
   selector: 'app-add-repo',
@@ -15,65 +14,67 @@ import { RepoService, Repository } from '../../services/repo.service';
           name="fullName"
           type="text"
           [(ngModel)]="fullNameInput"
-          [disabled]="submitting"
+          [disabled]="adding"
           autocomplete="off"
         />
       </label>
-      <button type="submit" [disabled]="submitting || !isValid()">Add</button>
+      <button type="submit" [disabled]="adding || !isValid()">
+        {{ adding ? 'Adding…' : 'Add' }}
+      </button>
     </form>
-    <p *ngIf="validationError">{{ validationError }}</p>
-    <p *ngIf="error">{{ error }}</p>
-  `
+    <p *ngIf="validationError" class="validation-error">{{ validationError }}</p>
+    <p *ngIf="addError" class="error" role="alert">{{ addError }}</p>
+  `,
+  styles: [
+    `
+      .validation-error,
+      .error {
+        margin: 0.5rem 0 0;
+        font-size: 0.875rem;
+      }
+      .validation-error {
+        color: var(--muted, #64748b);
+      }
+      .error {
+        color: #b91c1c;
+      }
+    `
+  ]
 })
-export class AddRepoComponent {
-  @Output() repoAdded = new EventEmitter<Repository>();
+export class AddRepoComponent implements OnChanges {
+  @Input() adding = false;
+  @Input() addError: string | null = null;
+  /** Incremented by parent after a successful add to reset local input. */
+  @Input() resetKey = 0;
+
+  @Output() repoAddRequested = new EventEmitter<string>();
 
   fullNameInput = '';
-  submitting = false;
   validationError: string | null = null;
-  error: string | null = null;
-
-  constructor(private repoService: RepoService) {}
 
   isValid(): boolean {
     return this.fullNameInput.trim().includes('/');
   }
 
-  submit(): void {
-    this.validationError = null;
-    this.error = null;
-    const name = this.fullNameInput.trim();
-    if (!name.includes('/')) {
-      this.validationError = 'Use owner/repo format (must include /).';
-      return;
+  ngOnChanges(changes: SimpleChanges): void {
+    const rk = changes['resetKey'];
+    if (
+      rk &&
+      !rk.firstChange &&
+      rk.currentValue !== rk.previousValue
+    ) {
+      this.fullNameInput = '';
+      this.validationError = null;
     }
-    this.submitting = true;
-    this.repoService.addRepo(name).subscribe({
-      next: (repo) => {
-        this.submitting = false;
-        this.fullNameInput = '';
-        this.repoAdded.emit(repo);
-      },
-      error: (err) => {
-        this.submitting = false;
-        this.error = this.extractErrorMessage(err);
-      }
-    });
   }
 
-  private extractErrorMessage(err: unknown): string {
-    if (err && typeof err === 'object' && 'error' in err) {
-      const body = (err as { error?: unknown }).error;
-      if (body && typeof body === 'object' && 'message' in body) {
-        const m = (body as { message?: unknown }).message;
-        if (typeof m === 'string') return m;
-      }
-      if (typeof body === 'string' && body.length) return body;
+  submit(): void {
+    this.validationError = null;
+    const name = this.fullNameInput.trim();
+    if (!name.includes('/')) {
+      this.validationError = 'Invalid format. Use owner/repo';
+      return;
     }
-    if (err && typeof err === 'object' && 'message' in err) {
-      const m = (err as { message?: unknown }).message;
-      if (typeof m === 'string') return m;
-    }
-    return 'Failed to add repository.';
+    this.repoAddRequested.emit(name);
   }
 }
