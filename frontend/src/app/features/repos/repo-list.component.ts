@@ -1,13 +1,14 @@
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { RepoService, Repository } from '../../services/repo.service';
 import { AddRepoComponent } from './add-repo.component';
 
 @Component({
   selector: 'app-repo-list',
   standalone: true,
-  imports: [NgFor, NgIf, AddRepoComponent],
+  imports: [NgFor, NgIf, RouterLink, AddRepoComponent],
   template: `
     <h1>Repositories</h1>
     <app-add-repo
@@ -25,6 +26,7 @@ import { AddRepoComponent } from './add-repo.component';
     <ul *ngIf="!loading || repos.length > 0" class="repo-list">
       <li *ngFor="let repo of repos">
         <a [href]="repo.htmlUrl" target="_blank" rel="noopener noreferrer">{{ repo.fullName }}</a>
+        <a [routerLink]="['/repos', repo.id, 'analytics']" class="analytics-link">Analytics</a>
         <button
           type="button"
           (click)="onDelete(repo.id)"
