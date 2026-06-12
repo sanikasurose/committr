@@ -2,11 +2,7 @@ import { ChangeDetectionStrategy, Component, Input, OnChanges } from '@angular/c
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { LanguageTrend } from '../../../services/analytics.service';
-
-const PALETTE = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1'
-];
+import { CHART_PALETTE } from '../../../core/chart-theme';
 
 @Component({
   selector: 'app-language-trend-chart',
@@ -14,8 +10,9 @@ const PALETTE = [
   imports: [BaseChartDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h3>Language trend</h3>
-    <canvas baseChart [data]="chartData" [options]="chartOptions" type="bar"></canvas>
+    <div class="relative h-64">
+      <canvas baseChart [data]="chartData" [options]="chartOptions" type="bar"></canvas>
+    </div>
   `,
   styles: [`:host { display: block; }`]
 })
@@ -25,7 +22,11 @@ export class LanguageTrendChartComponent implements OnChanges {
   chartData: ChartData<'bar'> = { labels: [], datasets: [] };
   chartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
-    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+    maintainAspectRatio: false,
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, beginAtZero: true }
+    }
   };
 
   ngOnChanges(): void {
@@ -40,7 +41,10 @@ export class LanguageTrendChartComponent implements OnChanges {
       datasets: langList.map((lang, i) => ({
         label: lang,
         data: this.data.map(w => w.languageDistribution?.[lang] ?? 0),
-        backgroundColor: PALETTE[i % PALETTE.length]
+        backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length],
+        borderRadius: 3,
+        borderSkipped: false,
+        maxBarThickness: 28
       }))
     };
   }

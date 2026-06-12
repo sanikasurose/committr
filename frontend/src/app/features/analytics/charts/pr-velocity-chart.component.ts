@@ -2,6 +2,9 @@ import { ChangeDetectionStrategy, Component, Input, OnChanges } from '@angular/c
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { PrVelocity } from '../../../services/analytics.service';
+import { withAlpha } from '../../../core/chart-theme';
+
+const VIOLET = '#a78bfa';
 
 @Component({
   selector: 'app-pr-velocity-chart',
@@ -9,8 +12,9 @@ import { PrVelocity } from '../../../services/analytics.service';
   imports: [BaseChartDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h3>PR velocity</h3>
-    <canvas baseChart [data]="chartData" [options]="chartOptions" type="line"></canvas>
+    <div class="relative h-56">
+      <canvas baseChart [data]="chartData" [options]="chartOptions" type="line"></canvas>
+    </div>
   `,
   styles: [`:host { display: block; }`]
 })
@@ -20,7 +24,10 @@ export class PrVelocityChartComponent implements OnChanges {
   chartData: ChartData<'line'> = { labels: [], datasets: [] };
   chartOptions: ChartConfiguration<'line'>['options'] = {
     responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
     scales: {
+      x: { grid: { display: false } },
       y: { beginAtZero: true, title: { display: true, text: 'Avg merge time (hours)' } }
     }
   };
@@ -31,9 +38,14 @@ export class PrVelocityChartComponent implements OnChanges {
       datasets: [{
         label: 'Avg merge time (hours)',
         data: this.data.map(d => d.avgMergeHours),
-        borderColor: '#8b5cf6',
-        backgroundColor: '#8b5cf6',
-        tension: 0.3
+        borderColor: VIOLET,
+        backgroundColor: withAlpha(VIOLET, 0.15),
+        pointBackgroundColor: VIOLET,
+        fill: true,
+        tension: 0.35,
+        borderWidth: 2,
+        pointRadius: 2,
+        pointHoverRadius: 5
       }]
     };
   }

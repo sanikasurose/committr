@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
-import { NgFor, NgIf } from '@angular/common';
+import { SlicePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { RepoService, Repository } from '../../services/repo.service';
@@ -8,71 +8,110 @@ import { AddRepoComponent } from './add-repo.component';
 @Component({
   selector: 'app-repo-list',
   standalone: true,
-  imports: [NgFor, NgIf, RouterLink, AddRepoComponent],
+  imports: [SlicePipe, RouterLink, AddRepoComponent],
   template: `
-    <h1>Repositories</h1>
-    <app-add-repo
-      [adding]="adding"
-      [addError]="addError"
-      [resetKey]="addSuccessKey"
-      (repoAddRequested)="onAddRequested($event)"
-    />
+    <main class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="m-0 text-2xl font-semibold tracking-tight">Repositories</h1>
+          <p class="mb-0 mt-1 text-sm text-ink-mute">
+            Track a repo to start ingesting commits, contributors, and PR history.
+          </p>
+        </div>
+        @if (repos.length > 0) {
+          <span class="chip">{{ repos.length }} tracked</span>
+        }
+      </div>
 
-    <p *ngIf="loading && repos.length === 0" class="status">Loading repositories…</p>
-    <p *ngIf="loading && repos.length > 0" class="status muted">Updating list…</p>
+      <app-add-repo
+        [adding]="adding"
+        [addError]="addError"
+        [resetKey]="addSuccessKey"
+        (repoAddRequested)="onAddRequested($event)"
+      />
 
-    <div *ngIf="error" class="error-banner" role="alert">{{ error }}</div>
+      @if (error) {
+        <div class="mt-6 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
+          {{ error }}
+        </div>
+      }
 
-    <ul *ngIf="!loading || repos.length > 0" class="repo-list">
-      <li *ngFor="let repo of repos">
-        <a [href]="repo.htmlUrl" target="_blank" rel="noopener noreferrer">{{ repo.fullName }}</a>
-        <a [routerLink]="['/repos', repo.id, 'analytics']" class="analytics-link">Analytics</a>
-        <button
-          type="button"
-          (click)="onDelete(repo.id)"
-          [disabled]="deletingId === repo.id"
-          [attr.aria-busy]="deletingId === repo.id"
-        >
-          {{ deletingId === repo.id ? 'Deleting…' : 'Delete' }}
-        </button>
-      </li>
-    </ul>
+      @if (loading && repos.length === 0) {
+        <div class="mt-6 grid gap-3">
+          @for (i of [0, 1, 2]; track i) {
+            <div class="card h-[76px] animate-pulse bg-surface-2"></div>
+          }
+        </div>
+      }
 
-    <p *ngIf="!loading && repos.length === 0 && !error" class="empty">No repositories added yet</p>
-  `,
-  styles: [
-    `
-      .status {
-        margin: 0.75rem 0;
+      @if (!loading || repos.length > 0) {
+        <div class="mt-6 grid gap-3">
+          @for (repo of repos; track repo.id) {
+            <div class="card group flex flex-wrap items-center gap-4 px-5 py-4 transition-colors hover:border-edge-strong">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2.5">
+                  <a [routerLink]="['/repos', repo.id, 'analytics']"
+                     class="truncate font-mono text-sm font-medium text-ink no-underline hover:text-accent">
+                    {{ repo.fullName }}
+                  </a>
+                  <span class="chip">{{ repo.isPrivate ? 'private' : 'public' }}</span>
+                </div>
+                <p class="mb-0 mt-1 font-mono text-[11px] text-ink-faint">
+                  added {{ repo.createdAt | slice: 0 : 10 }} · synced {{ repo.updatedAt | slice: 0 : 10 }}
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <a [routerLink]="['/repos', repo.id, 'analytics']" class="btn-secondary px-3 py-1.5">
+                  Analytics
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M2.5 9.5L9.5 2.5M9.5 2.5H4M9.5 2.5V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                  </svg>
+                </a>
+                <a [href]="repo.htmlUrl" target="_blank" rel="noopener noreferrer"
+                   class="btn-ghost p-2" title="Open on GitHub">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+                  </svg>
+                </a>
+                <button type="button" (click)="onDelete(repo.id)"
+                        [disabled]="deletingId === repo.id"
+                        [attr.aria-busy]="deletingId === repo.id"
+                        class="btn-ghost p-2 hover:!text-danger" title="Stop tracking">
+                  @if (deletingId === repo.id) {
+                    <span class="font-mono text-[11px]">…</span>
+                  } @else {
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+                      <path d="M2 4h11M5.5 4V2.5h4V4M6 7v4M9 7v4M3.5 4l.7 8.2c.05.45.43.8.9.8h4.8c.47 0 .85-.35.9-.8L11.5 4"
+                            stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                  }
+                </button>
+              </div>
+            </div>
+          }
+        </div>
       }
-      .status.muted {
-        font-size: 0.875rem;
-        color: var(--muted, #64748b);
+
+      @if (loading && repos.length > 0) {
+        <p class="mt-3 font-mono text-[11px] text-ink-faint">updating…</p>
       }
-      .error-banner {
-        margin: 0.75rem 0;
-        padding: 0.5rem 0.75rem;
-        border-radius: 6px;
-        background: color-mix(in srgb, #ef4444 12%, transparent);
-        color: #b91c1c;
+
+      @if (!loading && repos.length === 0 && !error) {
+        <div class="card mt-6 flex flex-col items-center px-6 py-16 text-center">
+          <svg width="36" height="36" viewBox="0 0 16 16" fill="none" class="mb-4 opacity-40" aria-hidden="true">
+            <circle cx="8" cy="8" r="3" stroke="#9595a0" stroke-width="1.4"/>
+            <path d="M8 0v3.5M8 12.5V16" stroke="#9595a0" stroke-width="1.4"/>
+          </svg>
+          <p class="m-0 text-sm font-medium text-ink">No repositories tracked yet</p>
+          <p class="mb-0 mt-1.5 max-w-xs text-sm text-ink-mute">
+            Add one above using <span class="font-mono text-xs text-ink">owner/repo</span> —
+            ingestion starts automatically.
+          </p>
+        </div>
       }
-      .repo-list {
-        list-style: none;
-        padding: 0;
-        margin: 1rem 0 0;
-      }
-      .repo-list li {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.5rem;
-      }
-      .empty {
-        margin-top: 1rem;
-        color: var(--muted, #64748b);
-      }
-    `
-  ]
+    </main>
+  `
 })
 export class RepoListComponent implements OnInit {
   repos: Repository[] = [];
