@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './core/auth.guard';
 import { RepoListComponent } from './features/repos/repo-list.component';
+import { AnalyticsDashboardComponent } from './features/analytics/analytics-dashboard.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { LoginComponent } from './pages/login/login.component';
 
@@ -14,6 +15,11 @@ export const routes: Routes = [
   {
     path: 'repos',
     component: RepoListComponent,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'repos/:id/analytics',
+    component: AnalyticsDashboardComponent,
     canActivate: [AuthGuard]
   },
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
