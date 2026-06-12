@@ -1,5 +1,6 @@
 package com.committr.backend.ingestion;
 
+import com.committr.backend.badge.BadgeService;
 import com.committr.backend.commit.CommitEntity;
 import com.committr.backend.commit.CommitRepository;
 import com.committr.backend.contributor.ContributorEntity;
@@ -31,17 +32,20 @@ public class SnapshotService {
     private final CommitRepository commitRepository;
     private final PrEventRepository prEventRepository;
     private final SnapshotRepository snapshotRepository;
+    private final BadgeService badgeService;
 
     public SnapshotService(
         RepositoryRepository repositoryRepository,
         CommitRepository commitRepository,
         PrEventRepository prEventRepository,
-        SnapshotRepository snapshotRepository
+        SnapshotRepository snapshotRepository,
+        BadgeService badgeService
     ) {
         this.repositoryRepository = repositoryRepository;
         this.commitRepository = commitRepository;
         this.prEventRepository = prEventRepository;
         this.snapshotRepository = snapshotRepository;
+        this.badgeService = badgeService;
     }
 
     @Transactional
@@ -110,6 +114,7 @@ public class SnapshotService {
         }
 
         log.debug("Upserted {} snapshots for repo {}", upserted, repositoryId);
+        badgeService.evictBadgeCacheForRepo(repositoryId);
     }
 
     private static LocalDate toWeekStart(LocalDate date) {
