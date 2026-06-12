@@ -1,6 +1,7 @@
 package com.committr.backend;
 
 import com.committr.backend.config.CorsProperties;
+import com.committr.backend.config.FrontendProperties;
 import com.committr.backend.config.GitHubOAuthProperties;
 import com.committr.backend.config.SecurityProperties;
 import com.committr.backend.config.SessionProperties;
@@ -13,6 +14,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication(exclude = {UserDetailsServiceAutoConfiguration.class})
 @EnableScheduling
 @EnableConfigurationProperties({
+    FrontendProperties.class,
     GitHubOAuthProperties.class,
     SecurityProperties.class,
     SessionProperties.class,
