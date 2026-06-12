@@ -2,56 +2,93 @@
 
 A multi-user GitHub developer activity dashboard that surfaces real impact — lines shipped, language trajectory, coding hours, PR velocity, and team share — not just commit counts.
 
-## Live demo
-
-- **Frontend:** https://sanikasurose.github.io/committr/
-- **Backend API:** https://committr-backend.onrender.com
-
-> The Render free tier sleeps after inactivity. First request after a cold start may take ~30 seconds.
-
-## Embed your stats badge
-
-![Committr Stats](https://committr-backend.onrender.com/api/badge/sanikasurose)
-
-Add this to any GitHub README — replace `your-username` with your GitHub login:
-
-```md
-![Committr Stats](https://committr-backend.onrender.com/api/badge/your-username)
-```
-
-The badge shows: **Lines Shipped · Streak · Top Language · Team Share**
+> **Not currently deployed.** Run it locally with the steps below.
 
 ## Stack
 
-Spring Boot 3 / Java 21 · Angular 19 · PostgreSQL 16 · Redis 7 · Docker Compose · Flyway · Jenkins · GitHub OAuth
+Spring Boot 3 / Java 21 · Angular 19 · PostgreSQL 16 · Redis 7 · Docker Compose · Flyway · GitHub OAuth
 
-## Running locally
+## Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (runs PostgreSQL, Redis, backend, and frontend together)
+- A GitHub OAuth App — create one at [github.com/settings/developers](https://github.com/settings/developers)
+
+## Setup
+
+**1. Clone and configure**
 
 ```bash
+git clone https://github.com/sanikasurose/committr.git
+cd committr
 cp .env.example .env
-# Fill in: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, ENCRYPTION_KEY (32-char AES key)
+```
 
+Open `.env` and fill in three required values:
+
+| Variable | Where to get it |
+|---|---|
+| `GITHUB_CLIENT_ID` | Your GitHub OAuth App → Client ID |
+| `GITHUB_CLIENT_SECRET` | Your GitHub OAuth App → Client secrets |
+| `ENCRYPTION_KEY` | Any 32-character string, e.g. `openssl rand -base64 24` |
+
+**2. Configure your GitHub OAuth App**
+
+In your GitHub OAuth App settings, set:
+- **Homepage URL:** `http://localhost:4200`
+- **Authorization callback URL:** `http://localhost:8080/api/auth/callback`
+
+**3. Start everything**
+
+```bash
 docker compose up --build
 ```
 
-- Backend: http://localhost:8080
-- Frontend: http://localhost:4200
+This starts PostgreSQL, Redis, the Spring Boot backend, and the Angular frontend. Flyway runs database migrations automatically on first boot.
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:4200 |
+| Backend API | http://localhost:8080 |
+
+**4. Sign in**
+
+Open http://localhost:4200, click **Continue with GitHub**, and you'll be redirected back to the dashboard after OAuth completes.
 
 ## Running tests
 
 ```bash
-# Unit tests (fast — no Docker required)
+# Unit tests only (no Docker required)
 cd backend && ./mvnw test
 
 # Unit + integration tests (requires Docker for Testcontainers)
 cd backend && ./mvnw verify
 ```
 
-## CI/CD (Jenkins)
+## Project structure
 
-4-stage pipeline defined in `Jenkinsfile`:
+```
+committr/
+├── backend/          # Spring Boot 3 / Java 21
+│   ├── src/main/java/com/committr/backend/
+│   │   ├── controller/   # REST endpoints
+│   │   ├── github/       # GitHub API client + OAuth
+│   │   ├── analytics/    # Aggregation service + endpoints
+│   │   └── ...
+│   └── src/main/resources/db/migration/   # Flyway SQL
+├── frontend/         # Angular 19 standalone components
+│   └── src/app/
+│       ├── features/ # repos, analytics, profile
+│       ├── pages/    # landing, login
+│       └── core/     # auth, guards, chart theme
+├── docker-compose.yml
+├── render.yaml       # deploy config (kept for reference, not active)
+└── Jenkinsfile       # CI pipeline (kept for reference, not active)
+```
 
-1. **Unit Tests** — `./mvnw test` (JUnit 5 + Mockito)
-2. **Integration Tests** — `./mvnw verify` (Testcontainers + real PostgreSQL)
-3. **Build** — Maven package + Angular build
-4. **Docker Deploy** — `docker compose build`; triggers Render deploy hook on `main`
+## Features
+
+- **GitHub OAuth** — sign in with your GitHub account; tokens encrypted at rest (AES-256)
+- **Repo tracking** — add any GitHub repo you have access to; data is ingested automatically
+- **Analytics dashboard** — team contribution share, language trend, coding-hours heatmap, commit frequency, PR velocity
+- **Public profile + badge** — shareable stats page at `/u/:username` with embeddable SVG badge
+- **Dark UI** — Tailwind CSS v4, Linear/Vercel-inspired design
