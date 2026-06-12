@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Input, OnChanges } from '@angular/c
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { ContributorShare } from '../../../services/analytics.service';
+import { CHART_PALETTE } from '../../../core/chart-theme';
 
 @Component({
   selector: 'app-team-share-chart',
@@ -9,10 +10,11 @@ import { ContributorShare } from '../../../services/analytics.service';
   imports: [BaseChartDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h3>Team share</h3>
-    <canvas baseChart [data]="chartData" [options]="chartOptions" type="doughnut"></canvas>
+    <div class="relative h-64">
+      <canvas baseChart [data]="chartData" [options]="chartOptions" type="doughnut"></canvas>
+    </div>
   `,
-  styles: [`:host { display: block; max-width: 480px; }`]
+  styles: [`:host { display: block; }`]
 })
 export class TeamShareChartComponent implements OnChanges {
   @Input() data: ContributorShare[] = [];
@@ -20,7 +22,11 @@ export class TeamShareChartComponent implements OnChanges {
   chartData: ChartData<'doughnut'> = { labels: [], datasets: [{ data: [] }] };
   chartOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
-    plugins: { legend: { position: 'right' } }
+    maintainAspectRatio: false,
+    cutout: '72%',
+    plugins: {
+      legend: { position: 'bottom' }
+    }
   };
 
   ngOnChanges(): void {
@@ -28,10 +34,10 @@ export class TeamShareChartComponent implements OnChanges {
       labels: this.data.map(c => c.login),
       datasets: [{
         data: this.data.map(c => c.commitCount),
-        backgroundColor: [
-          '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-          '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1'
-        ]
+        backgroundColor: CHART_PALETTE,
+        borderColor: '#121215',
+        borderWidth: 2,
+        hoverOffset: 6
       }]
     };
   }
