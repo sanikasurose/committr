@@ -13,4 +13,6 @@ public interface RepositoryRepository extends JpaRepository<RepositoryEntity, Lo
     boolean existsByUser_IdAndGithubRepoId(Long userId, Long githubRepoId);
 
     Optional<RepositoryEntity> findByUser_IdAndGithubRepoId(Long userId, Long githubRepoId);
+
+    List<RepositoryEntity> findAllByDeletedAtIsNull();
 }
