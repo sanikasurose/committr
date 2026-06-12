@@ -18,8 +18,10 @@ import com.committr.backend.user.User;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,7 @@ public class IngestionService {
     private final CommitRepository commitRepository;
     private final PrEventRepository prEventRepository;
     private final SnapshotService snapshotService;
+    private final StringRedisTemplate redisTemplate;
 
     public IngestionService(
         GitHubClient gitHubClient,
@@ -43,7 +46,8 @@ public class IngestionService {
         ContributorRepository contributorRepository,
         CommitRepository commitRepository,
         PrEventRepository prEventRepository,
-        SnapshotService snapshotService
+        SnapshotService snapshotService,
+        StringRedisTemplate redisTemplate
     ) {
         this.gitHubClient = gitHubClient;
         this.encryptionService = encryptionService;
@@ -52,6 +56,7 @@ public class IngestionService {
         this.commitRepository = commitRepository;
         this.prEventRepository = prEventRepository;
         this.snapshotService = snapshotService;
+        this.redisTemplate = redisTemplate;
     }
 
     @Transactional
@@ -72,6 +77,7 @@ public class IngestionService {
             ingestCommits(repo, repoOwner, repoName, token);
             ingestPrEvents(repo, repoOwner, repoName, token);
             snapshotService.buildSnapshots(repositoryId);
+            evictCacheForRepo(repositoryId);
             log.info("Ingestion complete for {}/{}", repoOwner, repoName);
         } catch (RateLimitException ex) {
             log.warn("GitHub rate limit hit during ingestion of {}/{} — will retry next cycle", repoOwner, repoName);
@@ -144,6 +150,14 @@ public class IngestionService {
             newCount++;
         }
         log.debug("Inserted {} new PR events for repo {}", newCount, repo.getId());
+    }
+
+    private void evictCacheForRepo(Long repositoryId) {
+        Set<String> keys = redisTemplate.keys("*:" + repositoryId + "*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            log.debug("Evicted {} cache keys for repo {}", keys.size(), repositoryId);
+        }
     }
 
     private ContributorEntity resolveContributor(RepositoryEntity repo, String login, String avatarUrl) {

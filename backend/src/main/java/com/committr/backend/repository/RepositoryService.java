@@ -2,6 +2,7 @@ package com.committr.backend.repository;
 
 import com.committr.backend.dto.github.GitHubRepoResponse;
 import com.committr.backend.github.GitHubClient;
+import com.committr.backend.ingestion.IngestionService;
 import com.committr.backend.session.SessionAuthenticationToken;
 import com.committr.backend.session.SessionUserDto;
 import com.committr.backend.user.User;
@@ -21,15 +22,18 @@ public class RepositoryService {
     private final RepositoryRepository repositoryRepository;
     private final GitHubClient gitHubClient;
     private final UserRepository userRepository;
+    private final IngestionService ingestionService;
 
     public RepositoryService(
         RepositoryRepository repositoryRepository,
         GitHubClient gitHubClient,
-        UserRepository userRepository
+        UserRepository userRepository,
+        IngestionService ingestionService
     ) {
         this.repositoryRepository = repositoryRepository;
         this.gitHubClient = gitHubClient;
         this.userRepository = userRepository;
+        this.ingestionService = ingestionService;
     }
 
     @Transactional(readOnly = true)
@@ -38,8 +42,14 @@ public class RepositoryService {
         return repositoryRepository.findByUser_IdAndDeletedAtIsNull(user.getId());
     }
 
-    @Transactional
     public RepositoryEntity addRepository(String fullName) {
+        RepositoryEntity saved = saveRepository(fullName);
+        ingestionService.ingest(saved.getId());
+        return saved;
+    }
+
+    @Transactional
+    public RepositoryEntity saveRepository(String fullName) {
         User user = requireCurrentUser();
         Long userId = user.getId();
 
