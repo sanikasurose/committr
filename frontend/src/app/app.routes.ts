@@ -25,6 +25,12 @@ export const routes: Routes = [
       )
   },
   { path: 'dashboard', pathMatch: 'full', redirectTo: 'repos' },
-  { path: '', pathMatch: 'full', redirectTo: 'repos' },
+  {
+    // Public marketing landing page — no auth guard.
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./pages/landing/landing.component').then((m) => m.LandingComponent)
+  },
   { path: '**', redirectTo: 'repos' }
 ];
