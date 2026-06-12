@@ -46,6 +46,7 @@ public class SnapshotEntity {
     @Column(name = "lines_deleted", nullable = false)
     private int linesDeleted = 0;
 
+    @JdbcTypeCode(SqlTypes.INTERVAL_SECOND)
     @Column(name = "pr_merge_time", columnDefinition = "interval")
     private Duration prMergeTime;
 
