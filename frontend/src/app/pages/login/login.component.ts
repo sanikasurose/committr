@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
+  imports: [RouterLink],
   template: `
     <main class="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6">
       <!-- backdrop: faint grid + accent glow -->
@@ -15,18 +16,17 @@ import { AuthService } from '../../core/auth.service';
       <div class="pointer-events-none absolute left-1/2 top-0 h-[480px] w-[720px] -translate-x-1/2 -translate-y-1/3 rounded-full opacity-25 blur-3xl"
            style="background: radial-gradient(closest-side, #5e6ad2, transparent);"></div>
 
-      <div class="relative flex w-full max-w-sm flex-col items-center text-center">
-        <span class="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-edge-strong bg-surface-2 shadow-lg shadow-black/40">
+      <div class="login-card card relative flex w-full max-w-sm flex-col items-center bg-surface/80 px-8 py-10 text-center shadow-2xl shadow-black/50 backdrop-blur">
+        <span class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-edge-strong bg-surface-2">
           <svg width="24" height="24" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <circle cx="8" cy="8" r="3" stroke="#7c86ff" stroke-width="1.6"/>
             <path d="M8 0v3.5M8 12.5V16" stroke="#7c86ff" stroke-width="1.6"/>
           </svg>
         </span>
 
-        <h1 class="m-0 text-3xl font-semibold tracking-tight">Committr</h1>
-        <p class="mb-8 mt-3 text-[15px] leading-relaxed text-ink-mute">
-          Proof of what you actually wrote — lines authored, language trends,
-          coding hours, and PR velocity across your repos.
+        <h1 class="m-0 text-xl font-semibold tracking-tight">Sign in to Committr</h1>
+        <p class="mb-7 mt-2 text-sm text-ink-mute">
+          Use your GitHub account to continue.
         </p>
 
         <button type="button" (click)="login()" class="btn-primary w-full px-4 py-2.5 text-[15px]">
@@ -36,20 +36,28 @@ import { AuthService } from '../../core/auth.service';
           Continue with GitHub
         </button>
 
-        <p class="mt-4 text-xs text-ink-faint">
+        <p class="mb-0 mt-4 text-xs text-ink-faint">
           Read-only access · we never write to your repos
         </p>
-
-        <div class="mt-12 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 font-mono text-[11px] text-ink-faint">
-          <span>lines authored</span><span class="text-edge-strong">·</span>
-          <span>language trends</span><span class="text-edge-strong">·</span>
-          <span>coding hours</span><span class="text-edge-strong">·</span>
-          <span>pr velocity</span><span class="text-edge-strong">·</span>
-          <span>commit streaks</span>
-        </div>
       </div>
+
+      <a routerLink="/" class="relative mt-6 text-xs text-ink-faint no-underline transition-colors hover:text-ink-mute">
+        ← Back to home
+      </a>
     </main>
-  `
+  `,
+  styles: [`
+    .login-card {
+      animation: card-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes card-pop {
+      from { opacity: 0; transform: translateY(8px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .login-card { animation: none; }
+    }
+  `]
 })
 export class LoginComponent implements OnInit {
   constructor(

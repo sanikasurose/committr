@@ -1,9 +1,16 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { SlicePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { RepoService, Repository } from '../../services/repo.service';
 import { AddRepoComponent } from './add-repo.component';
+
+const INGESTION_STATUSES = [
+  'Fetching commits…',
+  'Calculating contributor stats…',
+  'Aggregating weekly snapshots…',
+  'Almost there…'
+];
 
 @Component({
   selector: 'app-repo-list',
@@ -25,7 +32,6 @@ import { AddRepoComponent } from './add-repo.component';
 
       <app-add-repo
         [adding]="adding"
-        [addError]="addError"
         [resetKey]="addSuccessKey"
         (repoAddRequested)="onAddRequested($event)"
       />
@@ -36,7 +42,7 @@ import { AddRepoComponent } from './add-repo.component';
         </div>
       }
 
-      @if (loading && repos.length === 0) {
+      @if (loading && repos.length === 0 && !pendingAdd) {
         <div class="mt-6 grid gap-3">
           @for (i of [0, 1, 2]; track i) {
             <div class="card h-[76px] animate-pulse bg-surface-2"></div>
@@ -44,10 +50,59 @@ import { AddRepoComponent } from './add-repo.component';
         </div>
       }
 
-      @if (!loading || repos.length > 0) {
-        <div class="mt-6 grid gap-3">
+      <div class="mt-6 grid gap-3">
+        <!-- Ingestion in progress: pending card with cycling status -->
+        @if (pendingAdd) {
+          <div class="pending-card card relative overflow-hidden px-5 py-4" role="status" aria-live="polite">
+            <div class="flex flex-wrap items-center gap-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2.5">
+                  <span class="font-mono text-sm font-medium text-ink">{{ pendingAdd }}</span>
+                  <span class="chip">ingesting</span>
+                </div>
+                <p class="mb-0 mt-1.5 flex items-center gap-2 font-mono text-[11px] text-ink-mute">
+                  <svg class="spinner shrink-0" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" opacity="0.25"/>
+                    <path d="M8 1.5A6.5 6.5 0 0 1 14.5 8" stroke="#7c86ff" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  <span [class]="statusIndex % 2 === 0 ? 'status-fade-a' : 'status-fade-b'">
+                    {{ statusMessage }}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div class="shimmer pointer-events-none absolute inset-0"></div>
+          </div>
+        }
+
+        <!-- Ingestion failed: inline error card with retry -->
+        @if (failedAdd) {
+          <div class="card border-danger/30 px-5 py-4" role="alert">
+            <div class="flex flex-wrap items-center gap-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2.5">
+                  <span class="font-mono text-sm font-medium text-ink">{{ failedAdd.fullName }}</span>
+                  <span class="chip border-danger/40 text-danger">failed</span>
+                </div>
+                <p class="mb-0 mt-1 text-xs text-danger">{{ failedAdd.message }}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" (click)="retryAdd()" class="btn-secondary px-3 py-1.5">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 1.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Retry
+                </button>
+                <button type="button" (click)="dismissFailed()" class="btn-ghost px-3 py-1.5">Dismiss</button>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (!loading || repos.length > 0) {
           @for (repo of repos; track repo.id) {
-            <div class="card group flex flex-wrap items-center gap-4 px-5 py-4 transition-colors hover:border-edge-strong">
+            <div class="card group flex flex-wrap items-center gap-4 px-5 py-4 transition-colors hover:border-edge-strong"
+                 [class.card-enter]="repo.id === enteringId">
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2.5">
                   <a [routerLink]="['/repos', repo.id, 'analytics']"
@@ -90,14 +145,14 @@ import { AddRepoComponent } from './add-repo.component';
               </div>
             </div>
           }
-        </div>
-      }
+        }
+      </div>
 
       @if (loading && repos.length > 0) {
         <p class="mt-3 font-mono text-[11px] text-ink-faint">updating…</p>
       }
 
-      @if (!loading && repos.length === 0 && !error) {
+      @if (!loading && repos.length === 0 && !error && !pendingAdd && !failedAdd) {
         <div class="card mt-6 flex flex-col items-center px-6 py-16 text-center">
           <svg width="36" height="36" viewBox="0 0 16 16" fill="none" class="mb-4 opacity-40" aria-hidden="true">
             <circle cx="8" cy="8" r="3" stroke="#9595a0" stroke-width="1.4"/>
@@ -111,25 +166,94 @@ import { AddRepoComponent } from './add-repo.component';
         </div>
       }
     </main>
-  `
+  `,
+  styles: [`
+    .pending-card {
+      animation: pending-pulse 2s ease-in-out infinite;
+    }
+    @keyframes pending-pulse {
+      0%, 100% { border-color: var(--color-edge); }
+      50% { border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-edge)); }
+    }
+
+    .shimmer {
+      background: linear-gradient(100deg, transparent 30%, rgba(124, 134, 255, 0.05) 50%, transparent 70%);
+      background-size: 200% 100%;
+      animation: shimmer-sweep 2.2s linear infinite;
+    }
+    @keyframes shimmer-sweep {
+      from { background-position: 200% 0; }
+      to { background-position: -200% 0; }
+    }
+
+    .spinner {
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Two identical fades on alternating classes so the animation restarts
+       each time the status message advances. */
+    .status-fade-a { animation: status-fade-a 0.4s ease-out both; }
+    .status-fade-b { animation: status-fade-b 0.4s ease-out both; }
+    @keyframes status-fade-a {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes status-fade-b {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-enter {
+      animation: card-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes card-enter {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pending-card, .shimmer, .status-fade-a, .status-fade-b, .card-enter {
+        animation: none;
+      }
+    }
+  `]
 })
-export class RepoListComponent implements OnInit {
+export class RepoListComponent implements OnInit, OnDestroy {
   repos: Repository[] = [];
   loading = false;
   error: string | null = null;
   adding = false;
-  addError: string | null = null;
   /** Increment after a successful add so the child form can reset. */
   addSuccessKey = 0;
   deletingId: number | null = null;
 
+  /** Full name of the repo currently being ingested, if any. */
+  pendingAdd: string | null = null;
+  statusIndex = 0;
+  /** Last failed add, rendered as an inline error card with retry. */
+  failedAdd: { fullName: string; message: string } | null = null;
+  /** Id of the repo whose card should animate in after a successful add. */
+  enteringId: number | null = null;
+
+  private statusTimer: ReturnType<typeof setInterval> | null = null;
   private loadId = 0;
 
   private readonly repoService = inject(RepoService);
   private readonly cdr = inject(ChangeDetectorRef);
 
+  get statusMessage(): string {
+    return INGESTION_STATUSES[this.statusIndex];
+  }
+
   ngOnInit(): void {
     this.loadRepos();
+  }
+
+  ngOnDestroy(): void {
+    this.stopStatusCycle();
   }
 
   loadRepos(): void {
@@ -155,22 +279,41 @@ export class RepoListComponent implements OnInit {
 
   onAddRequested(fullName: string): void {
     this.adding = true;
-    this.addError = null;
+    this.failedAdd = null;
+    this.pendingAdd = fullName;
+    this.startStatusCycle();
     this.cdr.markForCheck();
     this.repoService.addRepo(fullName).subscribe({
-      next: () => {
+      next: (repo) => {
         this.adding = false;
-        this.addError = null;
+        this.pendingAdd = null;
+        this.stopStatusCycle();
+        this.enteringId = repo?.id ?? null;
         this.addSuccessKey++;
         this.cdr.markForCheck();
         this.loadRepos();
       },
       error: (err) => {
         this.adding = false;
-        this.addError = this.extractErrorMessage(err) || 'Failed to add repository';
+        this.pendingAdd = null;
+        this.stopStatusCycle();
+        this.failedAdd = {
+          fullName,
+          message: this.extractErrorMessage(err) || 'Ingestion failed — check the repo name and try again.'
+        };
         this.cdr.markForCheck();
       }
     });
+  }
+
+  retryAdd(): void {
+    const failed = this.failedAdd;
+    if (failed) this.onAddRequested(failed.fullName);
+  }
+
+  dismissFailed(): void {
+    this.failedAdd = null;
+    this.cdr.markForCheck();
   }
 
   onDelete(id: number): void {
@@ -189,6 +332,24 @@ export class RepoListComponent implements OnInit {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  private startStatusCycle(): void {
+    this.stopStatusCycle();
+    this.statusIndex = 0;
+    this.statusTimer = setInterval(() => {
+      if (this.statusIndex < INGESTION_STATUSES.length - 1) {
+        this.statusIndex++;
+        this.cdr.markForCheck();
+      }
+    }, 2500);
+  }
+
+  private stopStatusCycle(): void {
+    if (this.statusTimer !== null) {
+      clearInterval(this.statusTimer);
+      this.statusTimer = null;
+    }
   }
 
   private extractErrorMessage(err: unknown): string | null {
