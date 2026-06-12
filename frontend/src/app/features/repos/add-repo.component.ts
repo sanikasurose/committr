@@ -31,14 +31,10 @@ import { FormsModule } from '@angular/forms';
     @if (validationError) {
       <p class="mb-0 mt-2 text-xs text-ink-faint">{{ validationError }}</p>
     }
-    @if (addError) {
-      <p class="mb-0 mt-2 text-xs text-danger" role="alert">{{ addError }}</p>
-    }
   `
 })
 export class AddRepoComponent implements OnChanges {
   @Input() adding = false;
-  @Input() addError: string | null = null;
   /** Incremented by parent after a successful add to reset local input. */
   @Input() resetKey = 0;
 
