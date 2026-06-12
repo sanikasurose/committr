@@ -27,6 +27,8 @@ services:
         value: https://committr-backend.onrender.com/api/auth/callback
       - key: SESSION_COOKIE_SECURE
         value: "true"
+      - key: FRONTEND_URL
+        value: https://sanikasurose.github.io/committr
       # Render removed free Redis in 2024. Set SPRING_DATA_REDIS_HOST and
       # SPRING_DATA_REDIS_PORT manually if you provision an external Redis
       # (e.g. Upstash free tier). Without Redis, sessions will not persist

@@ -1,8 +1,8 @@
 package com.committr.backend.controller;
 
+import com.committr.backend.config.FrontendProperties;
 import com.committr.backend.config.SessionProperties;
 import com.committr.backend.dto.auth.AuthUserResponse;
-import com.committr.backend.dto.github.GithubUserLogPayload;
 import com.committr.backend.github.GitHubOAuthService;
 import com.committr.backend.session.RedisSessionService;
 import com.committr.backend.session.SessionAuthenticationToken;
@@ -10,6 +10,7 @@ import com.committr.backend.session.SessionCookieFactory;
 import com.committr.backend.session.SessionUserDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.net.URI;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -29,17 +30,20 @@ public class AuthController {
     private final RedisSessionService redisSessionService;
     private final SessionCookieFactory sessionCookieFactory;
     private final SessionProperties sessionProperties;
+    private final FrontendProperties frontendProperties;
 
     public AuthController(
         GitHubOAuthService gitHubOAuthService,
         RedisSessionService redisSessionService,
         SessionCookieFactory sessionCookieFactory,
-        SessionProperties sessionProperties
+        SessionProperties sessionProperties,
+        FrontendProperties frontendProperties
     ) {
         this.gitHubOAuthService = gitHubOAuthService;
         this.redisSessionService = redisSessionService;
         this.sessionCookieFactory = sessionCookieFactory;
         this.sessionProperties = sessionProperties;
+        this.frontendProperties = frontendProperties;
     }
 
     @GetMapping("/api/auth/login")
@@ -50,7 +54,7 @@ public class AuthController {
     }
 
     @GetMapping("/api/auth/callback")
-    public ResponseEntity<GithubUserLogPayload> callback(
+    public ResponseEntity<Void> callback(
         @RequestParam(value = "code", required = false) String code,
         HttpServletResponse response
     ) {
@@ -59,7 +63,9 @@ public class AuthController {
         ResponseCookie cookie = sessionCookieFactory.createSessionCookie(sessionId);
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookieFactory.createJSessionIdDeleteCookie().toString());
-        return ResponseEntity.ok(completion.payload());
+        return ResponseEntity.status(HttpStatus.FOUND)
+            .location(URI.create(frontendProperties.baseUrl() + "/repos"))
+            .build();
     }
 
     @GetMapping("/api/auth/me")

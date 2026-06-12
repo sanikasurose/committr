@@ -31,6 +31,9 @@ security:
   encryption-key: ${ENCRYPTION_KEY}
 
 committr:
+  frontend:
+    # Where the OAuth callback redirects after login (Angular app origin).
+    url: ${FRONTEND_URL:http://localhost:4200}
   session:
     ttl: 30m
     cookie-name: sessionId
